@@ -1,4 +1,4 @@
-import { endOfWeek, format, getWeek, isValid, parse, parseISO, startOfWeek } from 'date-fns';
+import { format, getWeek, parse, parseISO, startOfWeek } from 'date-fns';
 import type { DateKey, DateKeyType, DayKey, MonthKey, WeekKey, YearKey } from './types';
 import { isDayKey, isMonthKey, isWeekKey, isYearKey } from './guards';
 import { toDayKey, toMonthKey, toWeekKey, toYearKey } from './builders';
