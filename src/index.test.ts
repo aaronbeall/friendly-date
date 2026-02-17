@@ -177,3 +177,157 @@ describe('Current Period Checks', () => {
     expect(isCurrentDay(yesterdayKey)).toBe(false);
   });
 });
+
+describe('Format Options - omitCurrent', () => {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  const currentDay = now.getDate();
+  
+  describe('Day keys with omitCurrent', () => {
+    it('should omit month and year when omitCurrent is true for current month day', () => {
+      const todayKey = formatDateAsKey(now, 'day');
+      const result = formatFriendlyDate(todayKey, { omitCurrent: true });
+      expect(result).toBe(currentDay.toString());
+      expect(result).not.toContain(now.toLocaleString('en-US', { month: 'long' }));
+      expect(result).not.toContain(currentYear.toString());
+    });
+
+    it('should omit only year when omitCurrent is true for current year but different month', () => {
+      const differentMonth = currentMonth === 1 ? 2 : 1;
+      const dayKey = toDayKey(currentYear, differentMonth, 15);
+      const result = formatFriendlyDate(dayKey, { omitCurrent: true });
+      expect(result).not.toContain(currentYear.toString());
+      expect(result).toContain('15');
+    });
+
+    it('should show full date when omitCurrent is true for different year', () => {
+      const dayKey = toDayKey(currentYear - 1, 6, 15);
+      const result = formatFriendlyDate(dayKey, { omitCurrent: true });
+      expect(result).toContain((currentYear - 1).toString());
+      expect(result).toContain('June');
+      expect(result).toContain('15');
+    });
+
+    it('should omit month and year when omitCurrent is "month" for current month day', () => {
+      const todayKey = formatDateAsKey(now, 'day');
+      const result = formatFriendlyDate(todayKey, { omitCurrent: 'month' });
+      expect(result).toBe(currentDay.toString());
+    });
+
+    it('should omit only year when omitCurrent is "year" for current year', () => {
+      const dayKey = toDayKey(currentYear, 6, 15);
+      const result = formatFriendlyDate(dayKey, { omitCurrent: 'year' });
+      expect(result).not.toContain(currentYear.toString());
+      expect(result).toContain('June');
+      expect(result).toContain('15');
+    });
+
+    it('should show full date when omitCurrent is "year" for different year', () => {
+      const dayKey = toDayKey(currentYear - 1, 6, 15);
+      const result = formatFriendlyDate(dayKey, { omitCurrent: 'year' });
+      expect(result).toContain((currentYear - 1).toString());
+    });
+  });
+
+  describe('Month keys with omitCurrent', () => {
+    it('should omit year when omitCurrent is true for current year month', () => {
+      const monthKey = formatDateAsKey(now, 'month');
+      const result = formatFriendlyDate(monthKey, { omitCurrent: true });
+      expect(result).not.toContain(currentYear.toString());
+      expect(result).toContain(now.toLocaleString('en-US', { month: 'long' }));
+    });
+
+    it('should show full date when omitCurrent is true for different year', () => {
+      const monthKey = toMonthKey(currentYear - 1, 6);
+      const result = formatFriendlyDate(monthKey, { omitCurrent: true });
+      expect(result).toContain((currentYear - 1).toString());
+      expect(result).toContain('June');
+    });
+
+    it('should omit year when omitCurrent is "year" for current year', () => {
+      const monthKey = toMonthKey(currentYear, 6);
+      const result = formatFriendlyDate(monthKey, { omitCurrent: 'year' });
+      expect(result).not.toContain(currentYear.toString());
+      expect(result).toContain('June');
+    });
+  });
+
+  describe('Week keys with omitCurrent', () => {
+    it('should apply omitCurrent to expanded week range', () => {
+      const weekKey = dateToWeekKey(now);
+      const result = formatFriendlyDate(weekKey, { omitCurrent: true });
+      expect(result).toBeTruthy();
+    });
+  });
+
+  describe('Date ranges with omitCurrent', () => {
+    it('should apply omitCurrent to both dates in range', () => {
+      const start = toDayKey(currentYear, 6, 1);
+      const end = toDayKey(currentYear, 6, 15);
+      const result = formatFriendlyDate(start, end, { omitCurrent: 'year' });
+      expect(result).toBeTruthy();
+    });
+  });
+});
+
+describe('Format Options - dateStyle', () => {
+  it('should format day with short dateStyle', () => {
+    const result = formatFriendlyDate('2024-06-15', { dateStyle: 'short' });
+    expect(result).toBeTruthy();
+    expect(result.length).toBeLessThan(20);
+  });
+
+  it('should format day with medium dateStyle', () => {
+    const result = formatFriendlyDate('2024-06-15', { dateStyle: 'medium' });
+    expect(result).toBeTruthy();
+  });
+
+  it('should format day with long dateStyle', () => {
+    const result = formatFriendlyDate('2024-06-15', { dateStyle: 'long' });
+    expect(result).toBeTruthy();
+  });
+
+  it('should format day with long dateStyle (default)', () => {
+    const resultDefault = formatFriendlyDate('2024-06-15');
+    const resultLong = formatFriendlyDate('2024-06-15', { dateStyle: 'long' });
+    expect(resultDefault).toBe(resultLong);
+  });
+
+  it('should format day with full dateStyle including day of week', () => {
+    const result = formatFriendlyDate('2024-06-15', { dateStyle: 'full' });
+    expect(result).toContain('Saturday');
+    expect(result).toContain('June');
+    expect(result).toContain('15');
+    expect(result).toContain('2024');
+  });
+
+  it('should format month with dateStyle', () => {
+    const result = formatFriendlyDate('2024-06', { dateStyle: 'short' });
+    expect(result).toBeTruthy();
+  });
+
+  it('should format date range with dateStyle', () => {
+    const result = formatFriendlyDate('2024-06-01', '2024-06-15', { dateStyle: 'short' });
+    expect(result).toBeTruthy();
+  });
+});
+
+describe('Format Options - combined', () => {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+
+  it('should apply both omitCurrent and dateStyle', () => {
+    const dayKey = toDayKey(currentYear, 6, 15);
+    const result = formatFriendlyDate(dayKey, { omitCurrent: 'year', dateStyle: 'short' });
+    expect(result).toBeTruthy();
+    expect(result).not.toContain(currentYear.toString());
+  });
+
+  it('should work with date ranges and both options', () => {
+    const start = toDayKey(currentYear, 6, 1);
+    const end = toDayKey(currentYear, 6, 15);
+    const result = formatFriendlyDate(start, end, { omitCurrent: 'year', dateStyle: 'medium' });
+    expect(result).toBeTruthy();
+  });
+});

@@ -1,12 +1,49 @@
-import { endOfWeek, format, isValid, startOfWeek } from 'date-fns';
+import { endOfWeek, isValid, startOfWeek } from 'date-fns';
 import type { DateKey } from './types';
 import { isDayKey, isMonthKey, isWeekKey, isYearKey } from './guards';
 import { parseDateKey } from './converters';
 import { formatDateAsKey } from './converters';
 
-export function formatFriendlyDate(date: DateKey): string;
-export function formatFriendlyDate(start: DateKey, end: DateKey): string;
-export function formatFriendlyDate(start: DateKey, end?: DateKey): string {
+export interface FormatFriendlyDateOptions {
+  omitCurrent?: boolean | 'year' | 'month';
+  dateStyle?: 'full' | 'long' | 'medium' | 'short';
+}
+
+function createFormatter(options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  return new Intl.DateTimeFormat('en-US', options);
+}
+
+function getFormatterOptions(dateStyle: 'full' | 'long' | 'medium' | 'short' = 'long'): Intl.DateTimeFormatOptions {
+  return { dateStyle };
+}
+
+function shouldOmitYear(date: Date, omitCurrent: boolean | 'year' | 'month'): boolean {
+  if (!omitCurrent) return false;
+  const now = new Date();
+  return date.getFullYear() === now.getFullYear();
+}
+
+function shouldOmitMonth(date: Date, omitCurrent: boolean | 'year' | 'month'): boolean {
+  if (omitCurrent !== 'month') return false;
+  const now = new Date();
+  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+}
+
+export function formatFriendlyDate(date: DateKey, options?: FormatFriendlyDateOptions): string;
+export function formatFriendlyDate(start: DateKey, end: DateKey, options?: FormatFriendlyDateOptions): string;
+export function formatFriendlyDate(start: DateKey, endOrOptions?: DateKey | FormatFriendlyDateOptions, optionsArg?: FormatFriendlyDateOptions): string {
+  let end: DateKey | undefined;
+  let options: FormatFriendlyDateOptions;
+
+  if (typeof endOrOptions === 'object') {
+    end = undefined;
+    options = endOrOptions || {};
+  } else {
+    end = endOrOptions;
+    options = optionsArg || {};
+  }
+
+  const { omitCurrent = false, dateStyle = 'long' } = options;
   if (!start) return '';
 
   if (end && end !== start) {
@@ -15,22 +52,15 @@ export function formatFriendlyDate(start: DateKey, end?: DateKey): string {
       const endDate = endOfWeek(parseDateKey(end));
       const startDayKey = formatDateAsKey(startDate, 'day');
       const endDayKey = formatDateAsKey(endDate, 'day');
-      return formatFriendlyDate(startDayKey, endDayKey);
+      return formatFriendlyDate(startDayKey, endDayKey, options);
     }
 
     if (isDayKey(start) && isDayKey(end)) {
       const startDate = parseDateKey(start);
       const endDate = parseDateKey(end);
       if (isValid(startDate) && isValid(endDate)) {
-        if (startDate.getFullYear() === endDate.getFullYear()) {
-          if (startDate.getMonth() === endDate.getMonth()) {
-            return `${format(startDate, 'MMMM d')}-${format(endDate, 'd, yyyy')}`;
-          } else {
-            return `${format(startDate, 'MMMM d')} – ${format(endDate, 'MMMM d, yyyy')}`;
-          }
-        } else {
-          return `${format(startDate, 'MMMM d, yyyy')} – ${format(endDate, 'MMMM d, yyyy')}`;
-        }
+        const formatter = createFormatter(getFormatterOptions(dateStyle));
+        return formatter.formatRange(startDate, endDate);
       }
     }
 
@@ -38,15 +68,12 @@ export function formatFriendlyDate(start: DateKey, end?: DateKey): string {
       const startDate = parseDateKey(start);
       const endDate = parseDateKey(end);
       if (isValid(startDate) && isValid(endDate)) {
-        if (startDate.getFullYear() === endDate.getFullYear()) {
-          return `${format(startDate, 'MMMM')} – ${format(endDate, 'MMMM yyyy')}`;
-        } else {
-          return `${format(startDate, 'MMMM yyyy')} – ${format(endDate, 'MMMM yyyy')}`;
-        }
+        const formatter = createFormatter(getFormatterOptions(dateStyle));
+        return formatter.formatRange(startDate, endDate);
       }
     }
 
-    return `${formatFriendlyDate(start)} – ${formatFriendlyDate(end)}`;
+    return `${formatFriendlyDate(start, options)} – ${formatFriendlyDate(end, options)}`;
   }
 
   if (isWeekKey(start)) {
@@ -54,22 +81,49 @@ export function formatFriendlyDate(start: DateKey, end?: DateKey): string {
     const weekEnd = endOfWeek(parseDateKey(start));
     const startDayKey = formatDateAsKey(weekStart, 'day');
     const endDayKey = formatDateAsKey(weekEnd, 'day');
-    return formatFriendlyDate(startDayKey, endDayKey);
+    return formatFriendlyDate(startDayKey, endDayKey, options);
   }
 
   if (isMonthKey(start)) {
     const parsed = parseDateKey(start);
-    if (isValid(parsed)) return format(parsed, 'MMMM yyyy');
+    if (isValid(parsed)) {
+      const effectiveOmit = omitCurrent ? 'year' : omitCurrent;
+      const omitYear = shouldOmitYear(parsed, effectiveOmit);
+      const formatterOptions = omitYear
+        ? { month: 'long' } as Intl.DateTimeFormatOptions
+        : getFormatterOptions(dateStyle);
+      const formatter = createFormatter(formatterOptions);
+      return formatter.format(parsed);
+    }
   }
 
   if (isDayKey(start)) {
     const parsed = parseDateKey(start);
-    if (isValid(parsed)) return format(parsed, 'MMMM d, yyyy');
+    if (isValid(parsed)) {
+      const effectiveOmit = omitCurrent ? 'month' : omitCurrent;
+      const omitMonth = shouldOmitMonth(parsed, effectiveOmit);
+      const omitYear = shouldOmitYear(parsed, effectiveOmit);
+
+      let formatterOptions: Intl.DateTimeFormatOptions;
+      if (omitMonth) {
+        formatterOptions = { day: 'numeric' };
+      } else if (omitYear) {
+        formatterOptions = { month: 'long', day: 'numeric' };
+      } else {
+        formatterOptions = getFormatterOptions(dateStyle);
+      }
+
+      const formatter = createFormatter(formatterOptions);
+      return formatter.format(parsed);
+    }
   }
 
   if (isYearKey(start)) {
     const parsed = parseDateKey(start);
-    if (isValid(parsed)) return format(parsed, 'yyyy');
+    if (isValid(parsed)) {
+      const formatter = createFormatter(getFormatterOptions(dateStyle));
+      return formatter.format(parsed);
+    }
   }
 
   return start;

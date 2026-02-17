@@ -1,6 +1,37 @@
-# friendly-dates
+# `friendly-dates`
 
-Type-safe ISO-derived date keys for TypeScript with utilities for parsing, formatting, and converting between day, week, month, and year keys.
+A type-safe date handling library that preserves temporal resolution through ISO-compatible string keys, with built-in 
+internationalized formatting.
+
+## What Problem Does This Solve?
+
+### 1. Resolution-Aware Date Representation
+
+Instead of using `Date` objects or timestamps that lose information about intended granularity, this library uses typed string keys that encode both the date value AND its resolution:
+
+- `DayKey`: `"2024-11-25"` - A specific day
+- `MonthKey`: `"2024-11"` - An entire month  
+- `WeekKey`: `"2024-W47"` - An ISO week
+- `YearKey`: `"2024"` - An entire year
+
+This prevents bugs from accidentally treating a month-level date as a day-level date, while keeping storage simple (just strings).
+
+**The Problem:** Using a `Date` or UNIX timestamp loses information about the intended resolution. You have to either store it separately or create a new data structure that captures both date and resolution, which can be error-prone and result in bugs from mishandling dates at the wrong resolution.
+
+**The Solution:** Type-safe string keys that encode resolution directly in the format, validated by TypeScript's type system.
+
+### 2. Smart, Context-Aware Date Formatting
+
+Provides human-friendly formatting that:
+
+- **Intelligently handles date ranges** - Omits redundant year/month info (e.g., `"June 1 – 15, 2024"` instead of `"June 1, 2024 – June 15, 2024"`)
+- **Supports "omit current" logic** - Shows just `"15"` for today instead of `"February 17, 2026"`
+- **Leverages native `Intl.DateTimeFormat`** - Proper internationalization support
+- **Works seamlessly with typed date keys** - No manual resolution handling needed
+
+**In essence:** A thin, type-safe layer over ISO date strings that makes it easy to work with dates at different resolutions while providing excellent formatting out of the box.
+
+The library is particularly useful for applications that display dates in various contexts (calendars, date pickers, reports, analytics) where you need to maintain clarity about whether you're working with a specific day, a whole month, or a year.
 
 ## Features
 
@@ -104,13 +135,27 @@ import { formatFriendlyDate } from 'friendly-dates';
 // Single dates
 formatFriendlyDate('2024-01-15');    // "January 15, 2024"
 formatFriendlyDate('2024-01');       // "January 2024"
-formatFriendlyDate('2024-W03');      // "January 14-20, 2024" (week range)
+formatFriendlyDate('2024-W03');      // "January 14 – 20, 2024" (week range)
 formatFriendlyDate('2024');          // "2024"
 
-// Date ranges
-formatFriendlyDate('2024-01-15', '2024-01-20'); // "January 15-20, 2024"
+// Date ranges (smart redundancy elimination)
+formatFriendlyDate('2024-01-15', '2024-01-20'); // "January 15 – 20, 2024"
 formatFriendlyDate('2024-01', '2024-03');       // "January – March 2024"
 formatFriendlyDate('2024-W01', '2024-W03');     // Week range formatted as days
+
+// With options
+const now = new Date();
+const today = dateToDayKey(now);
+
+// Omit current context
+formatFriendlyDate(today, { omitCurrent: true });              // "17" (just the day)
+formatFriendlyDate('2026-06-15', { omitCurrent: 'year' });    // "June 15" (omit current year)
+
+// Different date styles
+formatFriendlyDate('2024-06-15', { dateStyle: 'full' });      // "Saturday, June 15, 2024"
+formatFriendlyDate('2024-06-15', { dateStyle: 'long' });      // "June 15, 2024" (default)
+formatFriendlyDate('2024-06-15', { dateStyle: 'medium' });    // "Jun 15, 2024"
+formatFriendlyDate('2024-06-15', { dateStyle: 'short' });     // "6/15/24"
 ```
 
 ### Current Period Checks
@@ -169,8 +214,15 @@ isCurrentPeriod(today, 'week'); // true (checks specific period)
 
 ### Formatters
 
-- `formatFriendlyDate(date: DateKey): string`
-- `formatFriendlyDate(start: DateKey, end: DateKey): string`
+- `formatFriendlyDate(date: DateKey, options?: FormatFriendlyDateOptions): string`
+- `formatFriendlyDate(start: DateKey, end: DateKey, options?: FormatFriendlyDateOptions): string`
+
+**Options:**
+- `omitCurrent?: boolean | 'year' | 'month'` - Omit current year/month from output
+  - `true`: Auto-detects based on date key type (month for days, year for months)
+  - `'year'`: Omits year if it matches current year
+  - `'month'`: Omits month & year if it matches current month
+- `dateStyle?: 'full' | 'long' | 'medium' | 'short'` - Date formatting style (default: `'long'`)
 
 ### Comparisons
 
