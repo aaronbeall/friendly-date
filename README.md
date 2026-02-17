@@ -1,7 +1,6 @@
 # `friendly-dates`
 
-A type-safe date handling library that preserves temporal resolution through ISO-compatible string keys, with built-in 
-internationalized formatting.
+A type-safe date handling library that preserves temporal resolution through ISO-compatible string keys, with built-in internationalized formatting.
 
 ## What Problem Does This Solve?
 
@@ -13,6 +12,10 @@ Instead of using `Date` objects or timestamps that lose information about intend
 - `MonthKey`: `"2024-11"` - An entire month  
 - `WeekKey`: `"2024-W47"` - A locale-based week (Sunday-Saturday by default)
 - `YearKey`: `"2024"` - An entire year
+- `DateKey`: `YearKey | MonthKey | WeekKey | DayKey`
+
+The key concept is to no longer see ambiguous `string` or `number` or `Date` in your data model, but instead specific 
+`DayKey` or `MonthKey` or `WeekKey` or `YearKey` or `DateKey` which forces you to handle resolution explicitly.
 
 This prevents bugs from accidentally treating a month-level date as a day-level date, while keeping storage simple (just ISO derived strings).
 
