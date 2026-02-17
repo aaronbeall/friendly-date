@@ -138,6 +138,65 @@ describe('Date Key Conversion', () => {
   });
 });
 
+describe('Week Year Edge Cases', () => {
+  it('should handle week spanning year boundary (Dec 31 2023 -> Jan 6 2024)', () => {
+    // Dec 31, 2023 is a Sunday that starts a week containing Jan 1-6, 2024
+    // This week belongs to 2024, so it should be 2024-W01
+    const dec31 = new Date('2023-12-31');
+    const weekKey = dateToWeekKey(dec31);
+    expect(weekKey).toBe('2024-W01');
+    
+    // Round-trip: parsing should return the same week start
+    const parsed = parseDateKey(weekKey);
+    expect(formatDateAsKey(parsed, 'day')).toBe('2023-12-31');
+  });
+
+  it('should handle Jan 1 2024 in week belonging to 2024', () => {
+    // Jan 1, 2024 is a Monday in the week that started Dec 31, 2023
+    const jan1 = new Date('2024-01-01');
+    const weekKey = dateToWeekKey(jan1);
+    expect(weekKey).toBe('2024-W01');
+  });
+
+  it('should handle last week of 2023', () => {
+    // Dec 30, 2023 is a Saturday in the last full week of 2023
+    const dec30 = new Date('2023-12-30');
+    const weekKey = dateToWeekKey(dec30);
+    expect(weekKey).toBe('2023-W52');
+    
+    // Round-trip test
+    const parsed = parseDateKey(weekKey);
+    const parsedWeekKey = dateToWeekKey(parsed);
+    expect(parsedWeekKey).toBe('2023-W52');
+  });
+
+  it('should handle week 2 of 2024', () => {
+    // Jan 7, 2024 is a Sunday starting week 2
+    const jan7 = new Date('2024-01-07');
+    const weekKey = dateToWeekKey(jan7);
+    expect(weekKey).toBe('2024-W02');
+  });
+
+  it('should round-trip correctly for various dates', () => {
+    const testDates = [
+      '2023-12-24', // Sunday, week 52 of 2023
+      '2023-12-31', // Sunday, week 1 of 2024
+      '2024-01-01', // Monday, week 1 of 2024
+      '2024-01-07', // Sunday, week 2 of 2024
+      '2024-06-15', // Middle of year
+    ];
+
+    testDates.forEach(dateStr => {
+      const original = new Date(dateStr);
+      const weekKey = dateToWeekKey(original);
+      const parsed = parseDateKey(weekKey);
+      const roundTrip = dateToWeekKey(parsed);
+      
+      expect(roundTrip).toBe(weekKey);
+    });
+  });
+});
+
 describe('Friendly Formatting', () => {
   it('should format day keys', () => {
     const result = formatFriendlyDate('2024-01-15');

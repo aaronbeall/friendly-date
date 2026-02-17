@@ -11,21 +11,17 @@ Instead of using `Date` objects or timestamps that lose information about intend
 
 - `DayKey`: `"2024-11-25"` - A specific day
 - `MonthKey`: `"2024-11"` - An entire month  
-- `WeekKey`: `"2024-W47"` - An ISO week
+- `WeekKey`: `"2024-W47"` - A locale-based week (Sunday-Saturday by default)
 - `YearKey`: `"2024"` - An entire year
 
-This prevents bugs from accidentally treating a month-level date as a day-level date, while keeping storage simple (just strings).
-
-**The Problem:** Using a `Date` or UNIX timestamp loses information about the intended resolution. You have to either store it separately or create a new data structure that captures both date and resolution, which can be error-prone and result in bugs from mishandling dates at the wrong resolution.
-
-**The Solution:** Type-safe string keys that encode resolution directly in the format, validated by TypeScript's type system.
+This prevents bugs from accidentally treating a month-level date as a day-level date, while keeping storage simple (just ISO derived strings).
 
 ### 2. Smart, Context-Aware Date Formatting
 
 Provides human-friendly formatting that:
 
 - **Intelligently handles date ranges** - Omits redundant year/month info (e.g., `"June 1 – 15, 2024"` instead of `"June 1, 2024 – June 15, 2024"`)
-- **Supports "omit current" logic** - Shows just `"15"` for today instead of `"February 17, 2026"`
+- **Supports "omit current" logic** - Shows just `"June 17"` for today instead of `"June 17, 2026"`
 - **Leverages native `Intl.DateTimeFormat`** - Proper internationalization support
 - **Works seamlessly with typed date keys** - No manual resolution handling needed
 
@@ -101,6 +97,33 @@ const weekKey = dateToWeekKey(date);    // "2024-W03"
 const monthKey = formatDateAsKey(date, 'month'); // MonthKey
 ```
 
+#### Understanding Week Keys
+
+Week keys use **locale-based week numbering** with **week years**:
+
+- **Week boundaries**: Sunday-Saturday by default (locale-dependent)
+- **Week year**: The year a week belongs to, which may differ from the calendar year
+- **Week numbering**: Weeks are numbered 1-53 based on which year they primarily belong to
+
+**Important:** A week that spans two calendar years belongs to the year containing the majority of its days.
+
+**Example:**
+```typescript
+// December 31, 2023 is a Sunday that starts a week containing Jan 1-6, 2024
+const dec31 = new Date('2023-12-31');
+dateToWeekKey(dec31);  // "2024-W01" (not "2023-W01")
+
+// This week belongs to 2024 because most of its days are in 2024
+// The week runs: Dec 31 (Sun) - Jan 6 (Sat)
+```
+
+This ensures that week keys round-trip correctly:
+```typescript
+const weekKey = dateToWeekKey(new Date('2023-12-31')); // "2024-W01"
+const parsed = parseDateKey(weekKey);                   // Returns Dec 31, 2023
+dateToWeekKey(parsed);                                  // "2024-W01" ✓
+```
+
 ### Parsing Date Keys
 
 ```typescript
@@ -141,7 +164,7 @@ formatFriendlyDate('2024');          // "2024"
 // Date ranges (smart redundancy elimination)
 formatFriendlyDate('2024-01-15', '2024-01-20'); // "January 15 – 20, 2024"
 formatFriendlyDate('2024-01', '2024-03');       // "January – March 2024"
-formatFriendlyDate('2024-W01', '2024-W03');     // Week range formatted as days
+formatFriendlyDate('2024-W01', '2024-W03');     // "January 14 – 20, 2024" (week range)
 
 // With options
 const now = new Date();
