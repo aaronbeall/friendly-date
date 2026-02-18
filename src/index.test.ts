@@ -142,7 +142,7 @@ describe('Week Year Edge Cases', () => {
   it('should handle week spanning year boundary (Dec 31 2023 -> Jan 6 2024)', () => {
     // Dec 31, 2023 is a Sunday that starts a week containing Jan 1-6, 2024
     // This week belongs to 2024, so it should be 2024-W01
-    const dec31 = new Date('2023-12-31');
+    const dec31 = new Date(2023, 11, 31); // December 31, 2023 (month is 0-indexed)
     const weekKey = dateToWeekKey(dec31);
     expect(weekKey).toBe('2024-W01');
     
@@ -153,14 +153,14 @@ describe('Week Year Edge Cases', () => {
 
   it('should handle Jan 1 2024 in week belonging to 2024', () => {
     // Jan 1, 2024 is a Monday in the week that started Dec 31, 2023
-    const jan1 = new Date('2024-01-01');
+    const jan1 = new Date(2024, 0, 1); // January 1, 2024 (month is 0-indexed)
     const weekKey = dateToWeekKey(jan1);
     expect(weekKey).toBe('2024-W01');
   });
 
   it('should handle last week of 2023', () => {
     // Dec 30, 2023 is a Saturday in the last full week of 2023
-    const dec30 = new Date('2023-12-30');
+    const dec30 = new Date(2023, 11, 30); // December 30, 2023 (month is 0-indexed)
     const weekKey = dateToWeekKey(dec30);
     expect(weekKey).toBe('2023-W52');
     
@@ -172,23 +172,22 @@ describe('Week Year Edge Cases', () => {
 
   it('should handle week 2 of 2024', () => {
     // Jan 7, 2024 is a Sunday starting week 2
-    const jan7 = new Date('2024-01-07');
+    const jan7 = new Date(2024, 0, 7); // January 7, 2024 (month is 0-indexed)
     const weekKey = dateToWeekKey(jan7);
     expect(weekKey).toBe('2024-W02');
   });
 
   it('should round-trip correctly for various dates', () => {
     const testDates = [
-      '2023-12-24', // Sunday, week 52 of 2023
-      '2023-12-31', // Sunday, week 1 of 2024
-      '2024-01-01', // Monday, week 1 of 2024
-      '2024-01-07', // Sunday, week 2 of 2024
-      '2024-06-15', // Middle of year
+      { date: new Date(2023, 11, 24), desc: 'Sunday, week 52 of 2023' },
+      { date: new Date(2023, 11, 31), desc: 'Sunday, week 1 of 2024' },
+      { date: new Date(2024, 0, 1), desc: 'Monday, week 1 of 2024' },
+      { date: new Date(2024, 0, 7), desc: 'Sunday, week 2 of 2024' },
+      { date: new Date(2024, 5, 15), desc: 'Middle of year' },
     ];
 
-    testDates.forEach(dateStr => {
-      const original = new Date(dateStr);
-      const weekKey = dateToWeekKey(original);
+    testDates.forEach(({ date }) => {
+      const weekKey = dateToWeekKey(date);
       const parsed = parseDateKey(weekKey);
       const roundTrip = dateToWeekKey(parsed);
       
@@ -376,11 +375,89 @@ describe('Format Options - combined', () => {
   const now = new Date();
   const currentYear = now.getFullYear();
 
-  it('should apply both omitCurrent and dateStyle', () => {
-    const dayKey = toDayKey(currentYear, 6, 15);
-    const result = formatFriendlyDate(dayKey, { omitCurrent: 'year', dateStyle: 'short' });
-    expect(result).toBeTruthy();
-    expect(result).not.toContain(currentYear.toString());
+  describe('omitCurrent with different dateStyles for days', () => {
+    it('should use long month format with dateStyle: long (default)', () => {
+      const dayKey = toDayKey(currentYear, 6, 15);
+      const result = formatFriendlyDate(dayKey, { omitCurrent: 'year', dateStyle: 'long' });
+      expect(result).toBe('June 15'); // month: 'long'
+    });
+
+    it('should use short month format with dateStyle: medium', () => {
+      const dayKey = toDayKey(currentYear, 6, 15);
+      const result = formatFriendlyDate(dayKey, { omitCurrent: 'year', dateStyle: 'medium' });
+      expect(result).toBe('Jun 15'); // month: 'short'
+    });
+
+    it('should use numeric month format with dateStyle: short', () => {
+      const dayKey = toDayKey(currentYear, 6, 15);
+      const result = formatFriendlyDate(dayKey, { omitCurrent: 'year', dateStyle: 'short' });
+      expect(result).toBe('6/15'); // month: 'numeric'
+    });
+
+    it('should use long month format with dateStyle: full', () => {
+      const dayKey = toDayKey(currentYear, 6, 15);
+      const result = formatFriendlyDate(dayKey, { omitCurrent: 'year', dateStyle: 'full' });
+      expect(result).toBe('June 15'); // month: 'long' (same as long for individual parts)
+    });
+  });
+
+  describe('omitCurrent with different dateStyles for months', () => {
+    it('should use long month format with dateStyle: long (default)', () => {
+      const monthKey = toMonthKey(currentYear, 6);
+      const result = formatFriendlyDate(monthKey, { omitCurrent: 'year', dateStyle: 'long' });
+      expect(result).toBe('June');
+    });
+
+    it('should use short month format with dateStyle: medium', () => {
+      const monthKey = toMonthKey(currentYear, 6);
+      const result = formatFriendlyDate(monthKey, { omitCurrent: 'year', dateStyle: 'medium' });
+      expect(result).toBe('Jun');
+    });
+
+    it('should use numeric month format with dateStyle: short', () => {
+      const monthKey = toMonthKey(currentYear, 6);
+      const result = formatFriendlyDate(monthKey, { omitCurrent: 'year', dateStyle: 'short' });
+      expect(result).toBe('6');
+    });
+  });
+
+  describe('omitCurrent: true with different dateStyles', () => {
+    it('should omit month and show just day with dateStyle: long', () => {
+      const today = dateToDayKey(now);
+      const result = formatFriendlyDate(today, { omitCurrent: true, dateStyle: 'long' });
+      expect(result).toBe(now.getDate().toString());
+    });
+
+    it('should omit month and show just day with dateStyle: short', () => {
+      const today = dateToDayKey(now);
+      const result = formatFriendlyDate(today, { omitCurrent: true, dateStyle: 'short' });
+      expect(result).toBe(now.getDate().toString());
+    });
+  });
+
+  describe('month ranges with different dateStyles', () => {
+    it('should use long month format with dateStyle: long (default)', () => {
+      const result = formatFriendlyDate('2024-01', '2024-03', { dateStyle: 'long' });
+      // Verify it uses long month names
+      expect(result).toContain('January');
+      expect(result).toContain('March');
+      expect(result).toContain('2024');
+    });
+
+    it('should use short month format with dateStyle: medium', () => {
+      const result = formatFriendlyDate('2024-01', '2024-03', { dateStyle: 'medium' });
+      // Verify it uses short month names
+      expect(result).toContain('Jan');
+      expect(result).toContain('Mar');
+      expect(result).toContain('2024');
+    });
+
+    it('should use numeric month format with dateStyle: short', () => {
+      const result = formatFriendlyDate('2024-01', '2024-03', { dateStyle: 'short' });
+      // Verify it uses numeric months with year
+      expect(result).toContain('1/2024');
+      expect(result).toContain('3/2024');
+    });
   });
 
   it('should work with date ranges and both options', () => {

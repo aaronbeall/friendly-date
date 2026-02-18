@@ -13,8 +13,16 @@ function createFormatter(options: Intl.DateTimeFormatOptions): Intl.DateTimeForm
   return new Intl.DateTimeFormat('en-US', options);
 }
 
-function getFormatterOptions(dateStyle: 'full' | 'long' | 'medium' | 'short' = 'long'): Intl.DateTimeFormatOptions {
-  return { dateStyle };
+function getMonthFormat(dateStyle: 'full' | 'long' | 'medium' | 'short'): 'long' | 'short' | 'numeric' {
+  switch (dateStyle) {
+    case 'full':
+    case 'long':
+      return 'long';
+    case 'medium':
+      return 'short';
+    case 'short':
+      return 'numeric';
+  }
 }
 
 function shouldOmitYear(date: Date, omitCurrent: boolean | 'year' | 'month'): boolean {
@@ -59,7 +67,7 @@ export function formatFriendlyDate(start: DateKey, endOrOptions?: DateKey | Form
       const startDate = parseDateKey(start);
       const endDate = parseDateKey(end);
       if (isValid(startDate) && isValid(endDate)) {
-        const formatter = createFormatter(getFormatterOptions(dateStyle));
+        const formatter = createFormatter({ dateStyle });
         return formatter.formatRange(startDate, endDate);
       }
     }
@@ -68,7 +76,8 @@ export function formatFriendlyDate(start: DateKey, endOrOptions?: DateKey | Form
       const startDate = parseDateKey(start);
       const endDate = parseDateKey(end);
       if (isValid(startDate) && isValid(endDate)) {
-        const formatter = createFormatter(getFormatterOptions(dateStyle));
+        const monthFormat = getMonthFormat(dateStyle);
+        const formatter = createFormatter({ month: monthFormat, year: 'numeric' });
         return formatter.formatRange(startDate, endDate);
       }
     }
@@ -87,11 +96,12 @@ export function formatFriendlyDate(start: DateKey, endOrOptions?: DateKey | Form
   if (isMonthKey(start)) {
     const parsed = parseDateKey(start);
     if (isValid(parsed)) {
-      const effectiveOmit = omitCurrent ? 'year' : omitCurrent;
+      const effectiveOmit = omitCurrent === true ? 'year' : omitCurrent;
       const omitYear = shouldOmitYear(parsed, effectiveOmit);
+      const monthFormat = getMonthFormat(dateStyle);
       const formatterOptions = omitYear
-        ? { month: 'long' } as Intl.DateTimeFormatOptions
-        : getFormatterOptions(dateStyle);
+        ? { month: monthFormat } as Intl.DateTimeFormatOptions
+        : { month: monthFormat, year: 'numeric' } as Intl.DateTimeFormatOptions;
       const formatter = createFormatter(formatterOptions);
       return formatter.format(parsed);
     }
@@ -108,9 +118,9 @@ export function formatFriendlyDate(start: DateKey, endOrOptions?: DateKey | Form
       if (omitMonth) {
         formatterOptions = { day: 'numeric' };
       } else if (omitYear) {
-        formatterOptions = { month: 'long', day: 'numeric' };
+        formatterOptions = { month: getMonthFormat(dateStyle), day: 'numeric' };
       } else {
-        formatterOptions = getFormatterOptions(dateStyle);
+        formatterOptions = { dateStyle };
       }
 
       const formatter = createFormatter(formatterOptions);
@@ -121,7 +131,7 @@ export function formatFriendlyDate(start: DateKey, endOrOptions?: DateKey | Form
   if (isYearKey(start)) {
     const parsed = parseDateKey(start);
     if (isValid(parsed)) {
-      const formatter = createFormatter(getFormatterOptions(dateStyle));
+      const formatter = createFormatter({ year: 'numeric' });
       return formatter.format(parsed);
     }
   }

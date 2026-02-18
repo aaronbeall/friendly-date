@@ -91,7 +91,7 @@ const year = toYearKey(2024);           // "2024"
 ```typescript
 import { dateToDayKey, dateToWeekKey, formatDateAsKey } from 'friendly-dates';
 
-const date = new Date('2024-01-15');
+const date = new Date(2024, 0, 15); // January 15, 2024 (month is 0-indexed)
 
 const dayKey = dateToDayKey(date);      // "2024-01-15"
 const weekKey = dateToWeekKey(date);    // "2024-W03"
@@ -113,7 +113,7 @@ Week keys use **locale-based week numbering** with **week years**:
 **Example:**
 ```typescript
 // December 31, 2023 is a Sunday that starts a week containing Jan 1-6, 2024
-const dec31 = new Date('2023-12-31');
+const dec31 = new Date(2023, 11, 31); // December 31, 2023 (month is 0-indexed)
 dateToWeekKey(dec31);  // "2024-W01" (not "2023-W01")
 
 // This week belongs to 2024 because most of its days are in 2024
@@ -122,7 +122,7 @@ dateToWeekKey(dec31);  // "2024-W01" (not "2023-W01")
 
 This ensures that week keys round-trip correctly:
 ```typescript
-const weekKey = dateToWeekKey(new Date('2023-12-31')); // "2024-W01"
+const weekKey = dateToWeekKey(new Date(2023, 11, 31)); // "2024-W01"
 const parsed = parseDateKey(weekKey);                   // Returns Dec 31, 2023
 dateToWeekKey(parsed);                                  // "2024-W01" ✓
 ```
@@ -167,11 +167,10 @@ formatFriendlyDate('2024');          // "2024"
 // Date ranges (smart redundancy elimination)
 formatFriendlyDate('2024-01-15', '2024-01-20'); // "January 15 – 20, 2024"
 formatFriendlyDate('2024-01', '2024-03');       // "January – March 2024"
-formatFriendlyDate('2024-W01', '2024-W03');     // "January 14 – 20, 2024" (week range)
+formatFriendlyDate('2024-W01', '2024-W03');     // "December 31, 2023 – January 20, 2024"
 
 // With options
-const now = new Date();
-const today = dateToDayKey(now);
+const today = dateToDayKey(new Date());
 
 // Omit current context
 formatFriendlyDate(today, { omitCurrent: true });              // "17" (just the day)
