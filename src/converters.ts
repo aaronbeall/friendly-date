@@ -3,6 +3,15 @@ import type { DateKey, DateKeyType, DayKey, MonthKey, WeekKey, YearKey } from '.
 import { isDayKey, isMonthKey, isWeekKey, isYearKey } from './guards';
 import { toDayKey, toMonthKey, toWeekKey, toYearKey } from './builders';
 
+/**
+ * Converts a Date object to a DayKey.
+ * 
+ * @param date - The date to convert
+ * @returns A DayKey in format "YYYY-MM-DD"
+ * 
+ * @example
+ * dateToDayKey(new Date(2024, 0, 15));  // "2024-01-15"
+ */
 export function dateToDayKey(date: Date): DayKey {
   return toDayKey(date.getFullYear(), date.getMonth() + 1, date.getDate());
 }
@@ -24,14 +33,44 @@ export function dateToWeekKey(date: Date): WeekKey {
   return toWeekKey(getWeekYear(date), getWeek(date));
 }
 
+/**
+ * Converts a Date object to a MonthKey.
+ * 
+ * @param date - The date to convert
+ * @returns A MonthKey in format "YYYY-MM"
+ * 
+ * @example
+ * dateToMonthKey(new Date(2024, 0, 15));  // "2024-01"
+ */
 export function dateToMonthKey(date: Date): MonthKey {
   return toMonthKey(date.getFullYear(), date.getMonth() + 1);
 }
 
+/**
+ * Converts a Date object to a YearKey.
+ * 
+ * @param date - The date to convert
+ * @returns A YearKey in format "YYYY"
+ * 
+ * @example
+ * dateToYearKey(new Date(2024, 0, 15));  // "2024"
+ */
 export function dateToYearKey(date: Date): YearKey {
   return toYearKey(date.getFullYear());
 }
 
+/**
+ * Converts a date key from one resolution to another.
+ * 
+ * @param dateKey - The date key to convert
+ * @param targetType - The target resolution ('day', 'week', 'month', or 'year')
+ * @returns A date key of the target type
+ * 
+ * @example
+ * convertDateKey('2024-01-15', 'week');   // "2024-W03"
+ * convertDateKey('2024-01-15', 'month');  // "2024-01"
+ * convertDateKey('2024-01-15', 'year');   // "2024"
+ */
 export function convertDateKey(dateKey: DateKey, targetType: 'day'): DayKey;
 export function convertDateKey(dateKey: DateKey, targetType: 'week'): WeekKey;
 export function convertDateKey(dateKey: DateKey, targetType: 'month'): MonthKey;
@@ -62,6 +101,18 @@ function parseWeekKeyToDate(week: WeekKey): string {
   return format(weekStart, 'yyyy-MM-dd');
 }
 
+/**
+ * Parses a date key into a Date object representing the start of that period.
+ * 
+ * @param key - The date key to parse
+ * @returns A Date object representing the start of the period
+ * 
+ * @example
+ * parseDateKey('2024-01-15');  // Date object for Jan 15, 2024
+ * parseDateKey('2024-01');     // Date object for Jan 1, 2024 (start of month)
+ * parseDateKey('2024-W03');    // Date object for start of week 3
+ * parseDateKey('2024');        // Date object for Jan 1, 2024 (start of year)
+ */
 export function parseDateKey(key: DateKey): Date {
   if (isDayKey(key)) {
     return parseISO(key);
@@ -78,6 +129,15 @@ export function parseDateKey(key: DateKey): Date {
   throw new Error(`Invalid DateKey: ${key}`);
 }
 
+/**
+ * Parses a DayKey into its component parts.
+ * 
+ * @param dayKey - The day key to parse
+ * @returns Object with year, month (1-12), and day components
+ * 
+ * @example
+ * parseDayKey('2024-01-15');  // { year: 2024, month: 1, day: 15 }
+ */
 export function parseDayKey(dayKey: DayKey): { year: number; month: number; day: number } {
   const [yearStr, monthStr, dayStr] = dayKey.split('-');
   return { year: parseInt(yearStr, 10), month: parseInt(monthStr, 10), day: parseInt(dayStr, 10) };
@@ -97,15 +157,45 @@ export function parseWeekKey(weekKey: WeekKey): { year: number; week: number } {
   return { year: parseInt(yearStr, 10), week: parseInt(weekStr, 10) };
 }
 
+/**
+ * Parses a MonthKey into its component parts.
+ * 
+ * @param monthKey - The month key to parse
+ * @returns Object with year and month (1-12) components
+ * 
+ * @example
+ * parseMonthKey('2024-01');  // { year: 2024, month: 1 }
+ */
 export function parseMonthKey(monthKey: MonthKey): { year: number; month: number } {
   const [yearStr, monthStr] = monthKey.split('-');
   return { year: parseInt(yearStr, 10), month: parseInt(monthStr, 10) };
 }
 
+/**
+ * Parses a YearKey into a year number.
+ * 
+ * @param yearKey - The year key to parse
+ * @returns The year as a number
+ * 
+ * @example
+ * parseYearKey('2024');  // 2024
+ */
 export function parseYearKey(yearKey: YearKey) {
   return parseInt(yearKey, 10);
 }
 
+/**
+ * Parses any date key into its component parts.
+ * 
+ * @param dateKey - The date key to parse
+ * @returns Object with year and optional month, day, or week components depending on key type
+ * 
+ * @example
+ * parseDateKeyToParts('2024-01-15');  // { year: 2024, month: 1, day: 15 }
+ * parseDateKeyToParts('2024-W03');    // { year: 2024, week: 3 }
+ * parseDateKeyToParts('2024-01');     // { year: 2024, month: 1 }
+ * parseDateKeyToParts('2024');        // { year: 2024 }
+ */
 export function parseDateKeyToParts(dateKey: DateKey): { year: number; month?: number; day?: number; week?: number } {
   if (isDayKey(dateKey)) {
     const { year, month, day } = parseDayKey(dateKey);
@@ -126,6 +216,20 @@ export function parseDateKeyToParts(dateKey: DateKey): { year: number; month?: n
   throw new Error(`Invalid DateKey: ${dateKey}`);
 }
 
+/**
+ * Formats a Date object as a date key of the specified type.
+ * 
+ * @param date - The date to format
+ * @param type - The type of date key to create ('day', 'week', 'month', or 'year')
+ * @returns A date key of the specified type
+ * 
+ * @example
+ * const date = new Date(2024, 0, 15);
+ * formatDateAsKey(date, 'day');    // "2024-01-15"
+ * formatDateAsKey(date, 'week');   // "2024-W03"
+ * formatDateAsKey(date, 'month');  // "2024-01"
+ * formatDateAsKey(date, 'year');   // "2024"
+ */
 export function formatDateAsKey(date: Date, type: 'day'): DayKey;
 export function formatDateAsKey(date: Date, type: 'week'): WeekKey;
 export function formatDateAsKey(date: Date, type: 'month'): MonthKey;
@@ -147,6 +251,18 @@ export function formatDateAsKey(date: Date, type: DateKeyType): DateKey {
   }
 }
 
+/**
+ * Determines the type of a date key.
+ * 
+ * @param key - The date key to check
+ * @returns The type of the date key ('day', 'week', 'month', or 'year')
+ * 
+ * @example
+ * getDateKeyType('2024-01-15');  // 'day'
+ * getDateKeyType('2024-W03');    // 'week'
+ * getDateKeyType('2024-01');     // 'month'
+ * getDateKeyType('2024');        // 'year'
+ */
 export function getDateKeyType(key: DateKey): DateKeyType {
   if (isDayKey(key)) return 'day';
   if (isWeekKey(key)) return 'week';
