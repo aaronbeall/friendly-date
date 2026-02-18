@@ -1,6 +1,6 @@
 {
   "name": "friendly-dates",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Type-safe ISO-derived date keys for TypeScript with utilities for parsing, formatting, and converting between day, week, month, and year keys",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
